@@ -1,0 +1,43 @@
+#-*- Makefile -*-
+include ../../gnuwin32/MkRules
+
+all: ../../../bin/Rblas.dll
+
+## suppress lots of warnings: this is a dummy
+blas00.o: blas00.c
+	$(CC) -O3 -I../../include  -c $< -o $@
+
+fortran.o: fortran.c
+	$(CC) -I../../include/R_ext -c $< -o $@ 
+
+prop.o : prop.c
+	$(CC) -I../../include/R_ext -c $< -o $@ 
+	
+wrappers.o : wrappers.c
+	$(CC) -I../../include/R_ext -c $< -o $@ 
+	
+dllmain.o : dllmain.c
+	$(CC) -I../../include/R_ext/Blas -c $< -o $@ 
+	
+print_vec.o : print_vec.c
+	$(CC) -I../../include/R_ext/Blas -c $< -o $@ 
+
+truncation.o : truncation.c
+	$(CC) -I../../include/R_ext/Blas -c $< -o $@ 
+	
+
+## Rblas.dll imports xerbla_ from R.dll
+ifeq ($(strip $(USE_ATLAS)),YES)
+../../../bin/Rblas.dll: blas00.o ../../gnuwin32/dllversion.o
+	@$(ECHO) -------- Building $@ --------
+	$(DLL) -shared $(DLLFLAGS) -o $@ $^ Rblas.def \
+	   -L../../../$(IMPDIR) -lR  -L"$(ATLAS_PATH)" -lf77blas -latlas
+else
+../../../bin/Rblas.dll: dllmain.o wrappers.o blas_new.o cmplxblas.o prop.o print_vec.o fortran.o truncation.o choose_dev.lib cudart.lib cublas.lib cuda.lib ../../gnuwin32/dllversion.o
+	@$(ECHO) -------- Building $@ --------
+	$(DLL) -shared $(DLLFLAGS) -o $@ $^ Rblas.def -L../../../$(IMPDIR) -lR $(FLIBS)
+endif
+
+distclean clean:
+	@$(RM) ../../../bin/Rblas.dll *~ dllmain.o blas00.o blas00.d blas.o print_vec.o blas_new.o set_matrix.o cmplxblas.o prop.o fortran.o truncation.o
+
